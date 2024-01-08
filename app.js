@@ -12,6 +12,7 @@ const bookings = require("./routes/bookingController");
 const wallets = require("./routes/walletController");
 const loanApplication = require("./routes/loanApplicationController");
 const messages = require("./routes/messageController");
+const fruits = require("./routes/fruitController");
 
 
 app.use(logger("dev"));
@@ -38,6 +39,7 @@ app.use("/api/booking/", bookings);
 app.use("/api/wallet/", wallets);
 app.use("/api/loans/",loanApplication);
 app.use("/api/messages/",messages);
+app.use("/api/fruits",fruits);
 
 
 
