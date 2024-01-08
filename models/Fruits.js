@@ -8,8 +8,8 @@ const fruitSchema = new mongoose.Schema({
         max: 255,
     },
     price: {
-        type: String,
-        required: mongoose.SchemaTypes.Number,
+        type: mongoose.SchemaTypes.Number,
+        required: true,
     },
     created_at: {
         type: Date,
