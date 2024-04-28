@@ -6,7 +6,7 @@ import randomstring from 'randomstring';
 import isAuth from "../middlewares/is-auth.js";
 import sendOTPMail from "../utility/sendMail.js";
 import OTP from "../models/Otp.js";
-
+import mongoose from 'mongoose';
 
 const router = express.Router();
 
@@ -33,6 +33,8 @@ const router = express.Router();
  *    responses:
  *       200:
  *         description: A list of users
+ *       500:
+ *         description: Internal server error
  */
 router.post("/sign-up", async (req, res) => {
   const emailExist = await User.findOne({ email: req.body.email });
@@ -47,22 +49,33 @@ router.post("/sign-up", async (req, res) => {
     balance: "0.00",
     fullname: req.body.fullname,
   });
+  const session = await mongoose.startSession(); // Start a new session
+  session.startTransaction();
   try {
     const savedUser = await user.save();
+
     const otp = randomstring.generate({
       length: 4,
       charset: 'numeric'
     });
+    const sentOTP = "" + otp;
     const newOTP = new OTP({
-      email,
-      otp
+      email: req.body.email,
+      otp: sentOTP
     });
-    await newOTP.save();
+    const savedOTP = await newOTP.save();
+    console.log("savedOTP", savedOTP)
+
     await sendOTPMail(req.body.email, otp);
+
+    await session.commitTransaction();
     res.status(200).send({ message: "Registration Successful", savedUser });
   } catch (err) {
-    console.log(err);
-    res.status(400).send({ message: err });
+    await session.abortTransaction();
+    console.error(err);
+    res.status(500).send({ message: "Error occurred during registration" });
+  } finally {
+    session.endSession(); // End the session
   }
 });
 
@@ -94,8 +107,8 @@ router.post("/sign-in", async (req, res) => {
   if (!user) return res.status(400).send({ message: "User does not Exist" });
   const validPass = await bcrypt.compare(req.body.password, user.password);
   if (!validPass) return res.status(400).send({ message: "Wrong Password" });
-
-  const token = jwt.sign({ id: user._id, email: user.email }, process.env.SECRETE_KEY, {
+  if (!user.isEmailVerified) return res.status(400).send({ message: "Email is not Verified" });
+  const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE_IN_HOURS,
   });
   res.status(200).send({ message: "Login Successful", user, token: token });
@@ -249,16 +262,18 @@ router.post("/forgot-password", async (req, res) => {
  */
 router.post('/verifyOtp', async (req, res) => {
   const { email, otp } = req.body;
-
   try {
     // Find the OTP document for the provided email and OTP value
     const otpDoc = await OTP.findOne({ email, otp });
-
     if (!otpDoc) {
       return res.status(400).json({ message: 'Invalid OTP' });
     }
-
-    console.log('OTP verified successfully');
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: 'User not found' });
+    }
+    user.isEmailVerified = true;
+    await user.save();
     res.status(200).json({ message: 'OTP verified successfully' });
   } catch (error) {
     console.error('Error verifying OTP:', error);
@@ -309,15 +324,15 @@ router.post('/send-otp', async (req, res) => {
   const { email } = req.body;
 
   // Generate a random OTP
-  const otp = randomstring.generate({
-    length: 6,
+  let otp = randomstring.generate({
+    length: 4,
     charset: 'numeric'
   });
-
+  const sentOtp = "" + otp;
   try {
     const newOTP = new OTP({
       email,
-      otp
+      otp: sentOtp,
     });
     await newOTP.save();
     await sendOTPMail(req.body.email, otp);

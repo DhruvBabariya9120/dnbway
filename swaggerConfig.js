@@ -8,14 +8,16 @@ const options = {
             version: '1.0.0',
             description: 'API Documentation for your Express app',
         },
-    },
-    securityDefinitions: {
-        bearerAuth: {
-            type: 'apiKey',
-            name: 'Authorization',
-            scheme: 'bearer',
-            in: 'header',
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT',
+                },
+            },
         },
+        security: [{ bearerAuth: [] }],
     },
     apis: ['./routes/*.js'],
 }

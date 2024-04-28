@@ -13,6 +13,7 @@ import messages from "./routes/messageController.js";
 import fruits from "./routes/fruitController.js";
 import specs from './swaggerConfig.js';
 import swaggerUi from 'swagger-ui-express';
+import errorHandling from "./middlewares/error-handling.js";
 
 dotenv.config();
 
@@ -64,7 +65,7 @@ app.use("/api/loans/", loanApplication);
 app.use("/api/messages/", messages);
 app.use("/api/fruits", fruits);
 
-
+app.use(errorHandling)
 
 app.get("/", function (req, res) {
     res.json({ homeresponse: "Welcome to DNBWay" });

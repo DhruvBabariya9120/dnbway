@@ -12,9 +12,9 @@ export default async function sendOTPMail(email, otp) {
     };
 
     const transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
+        host: 'dnbway.com',
+        port: 587,
+        secure: false,
         auth: {
             user: process.env.FROM_MAIL, // Your email address
             pass: process.env.MAIL_PASS // Your email password

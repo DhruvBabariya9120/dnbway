@@ -5,15 +5,15 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export default async (req, res, next) => {
-    const authHeader = req.get("Authorization");
+    const authHeader = req.headers.authorization;
     if (!authHeader) {
-        return res.status(422).json("Not Authantcated");
+        return res.status(422).json("Not Authanticated");
     }
-    const token = req.get("Authorization");
+    const [authType, token] = authHeader.split(' ');
 
     let decodedToken;
     try {
-        decodedToken = jwt.verify(token, process.env.SECRETE_KEY);
+        decodedToken = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
         return res.status(422).json("Not Authantcated");
     }

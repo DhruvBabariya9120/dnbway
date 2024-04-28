@@ -29,6 +29,10 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now(),
   },
+  isEmailVerified: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 export default mongoose.model('User', userSchema);
