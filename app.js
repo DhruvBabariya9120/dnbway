@@ -1,19 +1,23 @@
-require('dotenv').config()
-const express = require("express");
-const logger = require("morgan");
-const cors = require('cors');
-const bodyParser = require("body-parser");
-const app = express();
-const mongoose = require("mongoose");
-var port = process.env.PORT || 3000;
+import dotenv from "dotenv";
+import express from "express";
+import logger from "morgan";
+import cors from "cors";
+import bodyParser from "body-parser";
+import mongoose from "mongoose";
+import authRoute from "./routes/authController.js";
+import property from "./routes/propertyController.js";
+import bookings from "./routes/bookingController.js";
+import wallets from "./routes/walletController.js";
+import loanApplication from "./routes/loanApplicationController.js";
+import messages from "./routes/messageController.js";
+import fruits from "./routes/fruitController.js";
+import specs from './swaggerConfig.js';
+import swaggerUi from 'swagger-ui-express';
 
-const authRoute = require("./routes/authController");
-const property = require("./routes/propertyController");
-const bookings = require("./routes/bookingController");
-const wallets = require("./routes/walletController");
-const loanApplication = require("./routes/loanApplicationController");
-const messages = require("./routes/messageController");
-const fruits = require("./routes/fruitController");
+dotenv.config();
+
+const app = express();
+const port = process.env.PORT || 3000;
 
 app.use(cors())
 
@@ -23,8 +27,17 @@ app.use(function (req, res, next) {
     res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
     res.setHeader('Access-Control-Allow-Credentials', true);
     next();
- });
+});
 
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+
+// Inside the file, after the `specs` definition...
+
+// Route to export Swagger JSON
+app.get('/swagger-json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(specs);
+});
 app.use(logger("dev"));
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -47,9 +60,9 @@ app.use("/api/auth/", authRoute);
 app.use("/api/property/", property);
 app.use("/api/booking/", bookings);
 app.use("/api/wallet/", wallets);
-app.use("/api/loans/",loanApplication);
-app.use("/api/messages/",messages);
-app.use("/api/fruits",fruits);
+app.use("/api/loans/", loanApplication);
+app.use("/api/messages/", messages);
+app.use("/api/fruits", fruits);
 
 
 

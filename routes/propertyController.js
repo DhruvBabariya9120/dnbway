@@ -1,6 +1,7 @@
-const router = require("express").Router();
-const Property = require("../models/Property");
+import express from "express";
+import Property from "../models/Property.js";
 
+const router = express.Router();
 
 function getRandomNumber(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -98,5 +99,4 @@ router.get("/getAllProperties/:generatedID", async (req, res) => {
 });
 
 
-
-module.exports = router;
+export default router

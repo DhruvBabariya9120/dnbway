@@ -1,6 +1,7 @@
-const router = require("express").Router();
-const Message = require("../models/Message");
+import express from "express";
+import Message from "../models/Message.js";
 
+const router = express.Router();
 
 function getRandomNumber(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -41,42 +42,41 @@ router.post("/save-message", async (req, res) => {
 
 
 router.get("/list-messages/:email", async (req, res) => {
-    try{
+    try {
 
         if (
             !req.headers.authorization ||
             !req.headers.authorization.startsWith("Bearer ") ||
             !req.headers.authorization.split(" ")[1]
-          ) {
+        ) {
             return res.status(422).json({ message: "Please Provide Token!" });
-          }
+        }
 
-          const listAllMessages = await Message.find();
-          res.status(200).json({message: "all messages", listAllMessages})
+        const listAllMessages = await Message.find();
+        res.status(200).json({ message: "all messages", listAllMessages })
 
-    }catch (error) {
-    res.status(404).json({ message: error.message });
-  }
+    } catch (error) {
+        res.status(404).json({ message: error.message });
+    }
 });
 
 router.get("/list-messages/:messageId", async (req, res) => {
-    try{
+    try {
 
         if (
             !req.headers.authorization ||
             !req.headers.authorization.startsWith("Bearer ") ||
             !req.headers.authorization.split(" ")[1]
-          ) {
+        ) {
             return res.status(422).json({ message: "Please Provide Token!" });
-          }
+        }
 
-          const listAllMessages = await Message.find({messageId: messageId});
-          res.status(200).json({message: "all messages", listAllMessages})
+        const listAllMessages = await Message.find({ messageId: messageId });
+        res.status(200).json({ message: "all messages", listAllMessages })
 
-    }catch (error) {
-    res.status(404).json({ message: error.message });
-  }
+    } catch (error) {
+        res.status(404).json({ message: error.message });
+    }
 });
 
-
-module.exports = router;
+export default router;

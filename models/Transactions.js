@@ -1,27 +1,27 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const transactionSchema = new mongoose.Schema({
   email: {
     type: String,
-    required:true,
+    required: true,
     max: 255,
   },
   narration: {
     type: String,
-    required:true,
+    required: true,
     max: 255,
   },
   credit: {
     type: mongoose.SchemaTypes.Number,
-    required:true,
+    required: true,
   },
   debit: {
     type: mongoose.SchemaTypes.Number,
-    required:true,
+    required: true,
   },
   amount: {
     type: mongoose.SchemaTypes.Number,
-    required:true,
+    required: true,
   },
   created_at: {
     type: Date,
@@ -30,4 +30,4 @@ const transactionSchema = new mongoose.Schema({
 });
 
 
-module.exports = mongoose.model('Transactions',transactionSchema);
+export default mongoose.model('Transactions', transactionSchema);

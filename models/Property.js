@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const propertySchema = new mongoose.Schema({
     generatedID: {
@@ -48,7 +48,7 @@ const propertySchema = new mongoose.Schema({
     created_at: {
         type: Date,
         default: Date.now(),
-      },
+    },
 });
 
-module.exports = mongoose.model('Property', propertySchema);
+export default mongoose.model('Property', propertySchema);

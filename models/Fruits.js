@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const fruitSchema = new mongoose.Schema({
 
@@ -17,4 +17,4 @@ const fruitSchema = new mongoose.Schema({
     },
 });
 
-module.exports = mongoose.model('Fruits', fruitSchema);
+export default mongoose.model('Fruits', fruitSchema);

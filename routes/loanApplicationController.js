@@ -1,7 +1,9 @@
-const router = require("express").Router();
-const User = require("../models/User");
-const Trans = require("../models/Transactions");
-const LoanApplication = require("../models/LoanApplication");
+import express from "express";
+import User from "../models/User.js";
+import Trans from "../models/Transactions.js";
+import LoanApplication from "../models/LoanApplication.js";
+
+const router = express.Router();
 
 function getRandomNumber(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -91,4 +93,4 @@ router.get("/loanApplication", async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;

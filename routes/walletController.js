@@ -1,7 +1,8 @@
-const router = require("express").Router();
-const User = require("../models/User");
-const Trans = require("../models/Transactions");
+import express from "express";
+import User from "../models/User.js";
+import Trans from "../models/Transactions.js";
 
+const router = express.Router();
 router.get("/wallet-transfer", async (req, res) => {
   try {
     if (
@@ -75,25 +76,24 @@ router.get("/update-wallet", async (req, res) => {
     const balance = parseInt(user[0].balance);
 
     const total_amt = balance - amount;
-    try{
-        await User.findOneAndUpdate({email : req.query.email}, {$set: {balance: total_amt}});
-        const transactions = new Trans({
-          email: req.query.email,
-          narration: 'FX Transfer - '+amount,
-          credit: amount,
-          debit: 0.00,
-          amount: amount,
-        });
-        transactions.save();
-      }catch(err){
-        console.log(err);
-      }
-      return res.send({ error: false, message: "Wallet Updated" });
+    try {
+      await User.findOneAndUpdate({ email: req.query.email }, { $set: { balance: total_amt } });
+      const transactions = new Trans({
+        email: req.query.email,
+        narration: 'FX Transfer - ' + amount,
+        credit: amount,
+        debit: 0.00,
+        amount: amount,
+      });
+      transactions.save();
+    } catch (err) {
+      console.log(err);
+    }
+    return res.send({ error: false, message: "Wallet Updated" });
 
   } catch (error) {
     res.status(404).json({ message: error.message });
   }
 })
 
-
-module.exports = router;
+export default router

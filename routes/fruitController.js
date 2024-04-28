@@ -1,7 +1,7 @@
-const router = require("express").Router();
-const Fruits = require("../models/Fruits");
+import express from "express";
+import Fruits from "../models/Fruits.js";
 
-
+const router = express.Router();
 router.post("/register-fruit", async (req, res) => {
 
     const fruits = new Fruits({
@@ -29,4 +29,5 @@ router.get("/showFruits", async (req, res) => {
 
 })
 
-module.exports = router;
+
+export default router

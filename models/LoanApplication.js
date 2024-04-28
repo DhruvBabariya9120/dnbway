@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const loanApplicationSchema = new mongoose.Schema({
   referenceNumber: {
@@ -31,4 +31,4 @@ const loanApplicationSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model("LoanApplication", loanApplicationSchema);
+export default mongoose.model("LoanApplication", loanApplicationSchema);

@@ -1,6 +1,7 @@
-const router = require("express").Router();
-const Booking = require("../models/Bookings");
+import express from "express";
+import Booking from "../models/Bookings.js";
 
+const router = express.Router();
 function getRandomNumber(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -34,7 +35,7 @@ router.post("/register-booking", async (req, res) => {
         const bookingPrice = req.body.bookingPrice;
         const bookingPaymentMethod = req.body.bookingPaymentMethod;
         const bookingRequestorPaymentType = req.body.bookingRequestorPaymentType;
-        
+
 
         const booking = new Booking({
             bookingId: bookingId,
@@ -46,8 +47,8 @@ router.post("/register-booking", async (req, res) => {
             bookingPrice: bookingPrice,
             bookingPaymentMethod: bookingPaymentMethod,
             bookingRequestorPaymentType: bookingRequestorPaymentType,
-            isLoanPayment : false,
-            bookingStatus : true
+            isLoanPayment: false,
+            bookingStatus: true
         });
 
         const myBooking = await booking.save();
@@ -87,29 +88,28 @@ router.put("/edit-booking/:bookingId", async (req, res) => {
 
 
 router.put("/cancel-booking/:bookingId", async (req, res) => {
-    try{
+    try {
 
         if (
             !req.headers.authorization ||
             !req.headers.authorization.startsWith("Bearer ") ||
             !req.headers.authorization.split(" ")[1]
-          ) {
+        ) {
             return res.status(422).json({ message: "Please Provide Token!" });
-          }
+        }
 
 
-          const bookingId = req.params.bookingId;
-          const bookingStatus = false;
-  
-          const bookingInfo = await Booking.findOneAndUpdate({ bookingId: bookingId }, { $set: { bookingStatus: bookingStatus} });
-          return res.send({ error: false, message: "Booking Canceled" });
-          
+        const bookingId = req.params.bookingId;
+        const bookingStatus = false;
 
-    }catch (error) {
-    res.status(404).json({ message: error.message });
-  }
+        const bookingInfo = await Booking.findOneAndUpdate({ bookingId: bookingId }, { $set: { bookingStatus: bookingStatus } });
+        return res.send({ error: false, message: "Booking Canceled" });
+
+
+    } catch (error) {
+        res.status(404).json({ message: error.message });
+    }
 })
 
 
-
-module.exports = router;
+export default router;

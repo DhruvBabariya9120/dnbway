@@ -1,99 +1,332 @@
-const router = require("express").Router();
-const User = require("../models/User");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+import express from "express";
+import User from "../models/User.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import randomstring from 'randomstring';
+import isAuth from "../middlewares/is-auth.js";
+import sendOTPMail from "../utility/sendMail.js";
+import OTP from "../models/Otp.js";
 
+
+const router = express.Router();
+
+/**
+ * @swagger
+ * /api/auth/sign-up:
+ *   post:
+ *    summary: register the user
+ *    description: return saved user
+ *    requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fullname:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *    responses:
+ *       200:
+ *         description: A list of users
+ */
 router.post("/sign-up", async (req, res) => {
-    const emailExist = await User.findOne({ email: req.body.email });
-    if (emailExist) return res.status(400).send({message: "Email Exists"});
-  
+  const emailExist = await User.findOne({ email: req.body.email });
+  if (emailExist) return res.status(400).send({ message: "Email Already Exists" });
+
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(req.body.password, salt);
+
+  const user = new User({
+    email: req.body.email,
+    password: hashedPassword,
+    balance: "0.00",
+    fullname: req.body.fullname,
+  });
+  try {
+    const savedUser = await user.save();
+    const otp = randomstring.generate({
+      length: 4,
+      charset: 'numeric'
+    });
+    const newOTP = new OTP({
+      email,
+      otp
+    });
+    await newOTP.save();
+    await sendOTPMail(req.body.email, otp);
+    res.status(200).send({ message: "Registration Successful", savedUser });
+  } catch (err) {
+    console.log(err);
+    res.status(400).send({ message: err });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/sign-in:
+ *   post:
+ *     summary: login the user
+ *     description: return user token
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       200:
+ *         description: A list of users
+ */
+router.post("/sign-in", async (req, res) => {
+
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) return res.status(400).send({ message: "User does not Exist" });
+  const validPass = await bcrypt.compare(req.body.password, user.password);
+  if (!validPass) return res.status(400).send({ message: "Wrong Password" });
+
+  const token = jwt.sign({ id: user._id, email: user.email }, process.env.SECRETE_KEY, {
+    expiresIn: process.env.JWT_EXPIRE_IN_HOURS,
+  });
+  res.status(200).send({ message: "Login Successful", user, token: token });
+
+});
+
+/**
+ * @swagger
+ * /api/auth/get-info/{email}:
+ *   get:
+ *     summary: get the user
+ *     description: get thr user information from email
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: email
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The user email
+ *
+ *     responses:
+ *       200:
+ *         description: A users details
+ */
+router.get("/get-info/:email", isAuth, async (req, res) => {
+  try {
+    const user = await User.find({ email: req.params.email });
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
+});
+
+
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Forgot Password
+ *     description: Update user password using email address
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: The email address of the user
+ *                 example: user@example.com
+ *               password:
+ *                 type: string
+ *                 description: The new password
+ *                 example: newPassword123
+ *     responses:
+ *       200:
+ *         description: Password changed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Password Changed
+ *       404:
+ *         description: User not found or error occurred
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Error message
+ */
+router.post("/forgot-password", async (req, res) => {
+  try {
+
+    const email = req.body.email;
+    const password = req.body.password;
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
-  
-    const user = new User({
-      email: req.body.email,
-      password: hashedPassword,
-      phone: req.body.phone,
-      balance: "0.00",
-      fullname: req.body.fullname,
+    const hashedPassword = await bcrypt.hash(password, salt);
+    await User.findOneAndUpdate({ email: email }, { $set: { password: hashedPassword } });
+
+    return res.send({ error: false, message: "Password Changed" });
+
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/verifyOtp:
+ *   post:
+ *     summary: Verify OTP
+ *     description: Verify the OTP sent to a user's email address
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: The email address of the user
+ *                 example: user@example.com
+ *               otp:
+ *                 type: string
+ *                 description: The OTP to be verified
+ *                 example: 123456
+ *     responses:
+ *       200:
+ *         description: OTP verified successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: OTP verified successfully
+ *       400:
+ *         description: Invalid OTP
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid OTP
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
+ */
+router.post('/verifyOtp', async (req, res) => {
+  const { email, otp } = req.body;
+
+  try {
+    // Find the OTP document for the provided email and OTP value
+    const otpDoc = await OTP.findOne({ email, otp });
+
+    if (!otpDoc) {
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+
+    console.log('OTP verified successfully');
+    res.status(200).json({ message: 'OTP verified successfully' });
+  } catch (error) {
+    console.error('Error verifying OTP:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/auth/send-otp:
+ *   post:
+ *     summary: Send OTP via Email
+ *     description: Generate and send OTP via email to the provided email address
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: The email address where OTP will be sent
+ *                 example: user@example.com
+ *     responses:
+ *       200:
+ *         description: OTP sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: OTP sent successfully
+ *       500:
+ *         description: Failed to send OTP
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Failed to send OTP
+ */
+router.post('/send-otp', async (req, res) => {
+  const { email } = req.body;
+
+  // Generate a random OTP
+  const otp = randomstring.generate({
+    length: 6,
+    charset: 'numeric'
+  });
+
+  try {
+    const newOTP = new OTP({
+      email,
+      otp
     });
-    try {
-      const savedUser = await user.save();
-      //SendsignUpNotification(req.body.email);
-      res.send({ message: "Registration Successful", savedUser });
-    } catch (err) {
-      res.status(400).send({message : err});
-    }
-  });
-  
-  router.post("/sign-in", async (req, res) => {
-    const user = await User.findOne({ email: req.body.email });
-    if (!user) return res.status(400).send({message : "User does not Exist"});
-    const validPass = await bcrypt.compare(req.body.password, user.password);
-    if (!validPass) return res.status(400).send({message: "Wrong Password"});
-  
-    const token = jwt.sign({ email: req.body.email }, "DNBWay", {
-      expiresIn: "1h",
-    });
-  
-    //SendLoginNotification(req.body.email);
-    res.send({ message: "Login Successful", user ,token: token });
-  });
-  
-  router.get("/get-info/:email", async (req, res) => {
-    try {
-      if (
-        !req.headers.authorization ||
-        !req.headers.authorization.startsWith("Bearer ") ||
-        !req.headers.authorization.split(" ")[1]
-      ) {
-        return res.status(422).json({ message: "Please Provide Token!" });
-      }
-      const user = await User.find({ email: req.params.email });
-      res.status(200).json(user);
-    } catch (error) {
-      res.status(404).json({ message: error.message });
-    }
-  });
-  
-  
-  router.post("/reset-password", async (req, res) => {
-    try {
-      if (
-        !req.headers.authorization ||
-        !req.headers.authorization.startsWith("Bearer ") ||
-        !req.headers.authorization.split(" ")[1]
-      ) {
-        return res.status(422).json({ message: "Please Provide Token!" });
-      }
-  
-      const email = req.body.email;
-      const password = req.body.password;
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      await User.findOneAndUpdate({email : email}, {$set: {password : hashedPassword}});
-  
-      return res.send({ error: false, message: "Password Changed" });
-  
-    } catch (error) {
-      res.status(404).json({ message: error.message });
-    }
-  });
-  
-  router.post("/forgot-password", async (req, res) => {
-    try {
-      
-      const email = req.body.email;
-      const password = req.body.password;
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      await User.findOneAndUpdate({email : email}, {$set: {password : hashedPassword}});
-  
-      return res.send({ error: false, message: "Password Changed" });
-  
-    } catch (error) {
-      res.status(404).json({ message: error.message });
-    }
-  });
-  
-  module.exports = router;
+    await newOTP.save();
+    await sendOTPMail(req.body.email, otp);
+    res.status(200).json({ message: 'OTP sent successfully' });
+  } catch (error) {
+    console.error('Error sending email:', error);
+    res.status(500).json({ error: 'Failed to send OTP' });
+  }
+});
+
+
+export default router;
