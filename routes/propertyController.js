@@ -1,102 +1,263 @@
 import express from "express";
 import Property from "../models/Property.js";
-
+import isAuth from "../middlewares/is-auth.js";
 const router = express.Router();
 
-function getRandomNumber(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
 
-// Function to generate the unique ID
-function generateUniqueID() {
-    const prologue = "dbbproperty-";
-    const randomNumber = getRandomNumber(1000, 9999); // You can adjust the range as needed
-    const uniqueID = `${prologue}${randomNumber}`;
-    return uniqueID;
-}
+// Function to generate the unique I
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Property:
+ *       type: object
+ *       properties:
+ *         address:
+ *           $ref: '#/components/schemas/PropertyAddress'
+ *         propertyTimeTOSell:
+ *           type: string
+ *         reason:
+ *           type: string
+ *         propertyDetails:
+ *           type: string
+ *         propertyType:
+ *           type: string
+ *         finishedSqft:
+ *           type: number
+ *         lotSize:
+ *           type: number
+ *         builtYear:
+ *           type: number
+ *         bedrooms:
+ *           type: number
+ *         fullBaths:
+ *           type: number
+ *         securityDeposit:
+ *           type: number
+ *         monthlyRent:
+ *           type: number
+ *         contact:
+ *           type: string
+ *         amentities:
+ *           type: string
+ *     PropertyAddress:
+ *       type: object
+ *       properties:
+ *         propertyAddress:
+ *           type: string
+ *         unitNumber:
+ *           type: string
+ *         city:
+ *           type: string
+ *         state:
+ *           type: string
+ *         zipcode:
+ *           type: number
+ *         latitude:
+ *           type: number
+ *         longitude:
+ *           type: number
+ */
 
-router.post("/register-property", async (req, res) => {
+/**
+ * @swagger
+ * /api/property/properties:
+ *   post:
+ *     summary: Create a new property
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Property'
+ *     responses:
+ *       '201':
+ *         description: Property created successfully
+ *       '400':
+ *         description: Bad request
+ */
+router.post("/properties", isAuth, async (req, res) => {
     try {
+        req.body.userId = req.userId;
+        const property = await Property.create(req.body);
+        res.status(201).json(property);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
 
-        if (
-            !req.headers.authorization ||
-            !req.headers.authorization.startsWith("Bearer ") ||
-            !req.headers.authorization.split(" ")[1]
-        ) {
-            return res.status(422).json({ message: "Please Provide Token!" });
+/**
+ * @swagger
+ * /api/property/properties/{id}:
+ *   put:
+ *     summary: Update a property by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Property ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Property'
+ *     responses:
+ *       '200':
+ *         description: Property updated successfully
+ *       '404':
+ *         description: Property not found
+ *       '400':
+ *         description: Bad request
+ */
+router.put("/properties/:id", isAuth, async (req, res) => {
+    try {
+        const existingProperty = await Property.findById(req.params.id);
+        if (!existingProperty) {
+            return res.status(404).json({ message: "Property not found" });
         }
+        if (existingProperty.userId.toString() !== req.userId) {
+            return res.status(401).json({ message: "Not authorized" });
+        }
+        const property = await Property.findByIdAndUpdate(req.params.id, req.body, {
+            new: true,
+            runValidators: true,
+        });
+        if (!property) {
+            return res.status(404).json({ message: "Property not found" });
+        }
+        res.status(200).json(property);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
 
-        const generatedID = generateUniqueID();
-        const propertyType = req.body.propertyType;
-        const landlordName = req.body.landlordName;
-        const landlordTelephone = req.body.landlordTelephone;
-        const landlordEmail = req.body.landlordEmail;
-        const landlordAddress = req.body.landlordAddress;
-        const propertyreqType = req.body.propertyreqType;
-        const propertyDetails = req.body.propertyDetails;
-        const price = req.body.price;
+/**
+ * @swagger
+ * /api/property/properties/user:
+ *   get:
+ *     summary: Get properties based on user ID
+ *     responses:
+ *       '200':
+ *         description: A list of properties
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Property'
+ *       '400':
+ *         description: Bad request
+ *       '500':
+ *         description: Internal server error
+ */
+router.get("/properties/user/", isAuth, async (req, res) => {
+    try {
+        // Extract the user ID from the query parameters
+        const userId = req.userId;
 
-        const saveProperty = new Property({
+        // Query properties based on the user ID
+        const properties = await Property.find({ userId: userId });
 
-            generatedID: generatedID,
-            propertyType: propertyType,
-            landlordName: landlordName,
-            landlordTelephone: landlordTelephone,
-            landlordEmail: landlordEmail,
-            landlordAddress: landlordAddress,
-            propertyreqType: propertyreqType,
-            propertyDetails: propertyDetails,
-            price: price
+        // Send the properties as a response
+        res.status(200).json(properties);
+    } catch (err) {
+        // Handle errors
+        res.status(500).json({ message: err.message });
+    }
+});
+
+/**
+ * @swagger
+ * /api/property/properties/{id}:
+ *   delete:
+ *     summary: Delete a property by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Property ID
+ *     responses:
+ *       '200':
+ *         description: Property deleted successfully
+ *       '404':
+ *         description: Property not found
+ */
+router.delete("/properties/:id", isAuth, async (req, res) => {
+    try {
+        const existingProperty = await Property.findById(req.params.id);
+        if (!existingProperty) {
+            return res.status(404).json({ message: "Property not found" });
+        }
+        if (existingProperty.userId.toString() !== req.userId) {
+            return res.status(401).json({ message: "Not authorized" });
+        }
+        await Property.findByIdAndDelete(req.params.id);
+        res.status(200).json({ message: "Property deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+/**
+ * @swagger
+ * /api/property/properties:
+ *   get:
+ *     summary: Get properties within a certain range of latitude and longitude
+ *     parameters:
+ *       - in: query
+ *         name: latitude
+ *         schema:
+ *           type: number
+ *         required: true
+ *         description: Latitude coordinate
+ *       - in: query
+ *         name: longitude
+ *         schema:
+ *           type: number
+ *         required: true
+ *         description: Longitude coordinate
+ *       - in: query
+ *         name: range
+ *         schema:
+ *           type: number
+ *         required: true
+ *         description: Range in meters
+ *     responses:
+ *       '200':
+ *         description: A list of properties within the specified range
+ *       '400':
+ *         description: Bad request
+ *       '500':
+ *         description: Internal server error
+ */
+router.get("/properties", isAuth, async (req, res) => {
+    try {
+        const latitude = req.query.latitude;
+        const longitude = req.query.longitude;
+        const range = req.query.range;
+
+        // Query properties within the specified range of latitude and longitude
+        const properties = await Property.find({
+            "address.latitude": {
+                $geoWithin: {
+                    $centerSphere: [[parseFloat(longitude), parseFloat(latitude)], range / 6378100] // Convert range to radians
+                }
+            },
+            "address.longitude": {
+                $geoWithin: {
+                    $centerSphere: [[parseFloat(longitude), parseFloat(latitude)], range / 6378100] // Convert range to radians
+                }
+            }
         });
 
-        const myProperty = await saveProperty.save();
-        res.send({ message: "Property Registration Successful", myProperty });
-
-    } catch (error) {
-        res.status(404).json({ message: error.message });
+        res.status(200).json(properties);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
     }
 });
-
-
-router.get("/getAllProperties", async (req, res) => {
-    try {
-
-        if (
-            !req.headers.authorization ||
-            !req.headers.authorization.startsWith("Bearer ") ||
-            !req.headers.authorization.split(" ")[1]
-        ) {
-            return res.status(422).json({ message: "Please Provide Token!" });
-        }
-
-        const listAllProperties = await Property.find();
-        res.status(200).json(listAllProperties)
-
-
-    } catch (error) {
-        res.status(404).json({ message: error.message });
-    }
-});
-
-router.get("/getAllProperties/:generatedID", async (req, res) => {
-    try {
-
-        if (
-            !req.headers.authorization ||
-            !req.headers.authorization.startsWith("Bearer ") ||
-            !req.headers.authorization.split(" ")[1]
-        ) {
-            return res.status(422).json({ message: "Please Provide Token!" });
-        }
-
-        const listAllProperties = await Property.find({ generatedID: req.params.generatedID });
-        res.status(200).json(listAllProperties)
-
-
-    } catch (error) {
-        res.status(404).json({ message: error.message });
-    }
-});
-
-
 export default router

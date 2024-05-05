@@ -1,54 +1,69 @@
 import mongoose from "mongoose";
+import PropertyAddress from "./PropertyAddress.js";
 
 const propertySchema = new mongoose.Schema({
-    generatedID: {
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    address: {
+        type: PropertyAddress.schema,
+        required: true,
+    },
+    propertyTimeTOSell: {
+        type: String,
+        max: 255,
+    },
+    reason: {
         type: String,
         required: true,
-        max: 255,
+    },
+    propertyDetails: {
+        type: String,
+        required: true,
     },
     propertyType: {
         type: String,
         required: true,
         max: 255,
     },
-    landlordName: {
+    finishedSqft: {
+        type: Number,
+        required: true,
+    },
+    lotSize: {
+        type: Number,
+        required: true,
+    },
+    builtYear: {
+        type: Number,
+        required: true,
+    },
+    bedrooms: {
+        type: Number,
+        required: true,
+    },
+    fullBaths: {
+        type: Number,
+        required: true,
+    },
+    securityDeposit: {
+        type: Number,
+        required: true,
+    },
+    monthlyRent: {
+        type: Number,
+        required: true,
+    },
+    contact: {
         type: String,
-        required: true,
-        max: 255,
     },
-    landlordTelephone: {
+    amentities: {
         type: String,
-        required: true,
-        max: 255,
     },
-    landlordEmail: {
-        type: String,
-        required: true,
-        max: 255,
-    },
-    landlordAddress: {
-        type: String,
-        required: true,
-        max: 255,
-    },
-    propertyreqType: {
-        type: String,
-        required: true,
-        max: 255,
-    },
-    propertyDetails: {
-        type: String,
-        required: true,
-        max: 255,
-    },
-    price: {
-        type: mongoose.SchemaTypes.Number,
-        required: true,
-    },
-    created_at: {
-        type: Date,
-        default: Date.now(),
-    },
+}, {
+    timestamps: true,
 });
 
 export default mongoose.model('Property', propertySchema);
