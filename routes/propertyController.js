@@ -53,10 +53,16 @@ const router = express.Router();
  *           type: string
  *         zipcode:
  *           type: number
- *         latitude:
- *           type: number
- *         longitude:
- *           type: number
+ *         location:
+ *           type: object
+ *           properties:
+ *             type:
+ *               type: string
+ *               enum: ['Point']
+ *             coordinates:
+ *               type: array
+ *               items:
+ *                 type: number
  */
 
 /**
@@ -221,12 +227,6 @@ router.delete("/properties/:id", isAuth, async (req, res) => {
  *           type: number
  *         required: true
  *         description: Longitude coordinate
- *       - in: query
- *         name: range
- *         schema:
- *           type: number
- *         required: true
- *         description: Range in meters
  *     responses:
  *       '200':
  *         description: A list of properties within the specified range
@@ -237,26 +237,23 @@ router.delete("/properties/:id", isAuth, async (req, res) => {
  */
 router.get("/properties", isAuth, async (req, res) => {
     try {
-        const latitude = req.query.latitude;
-        const longitude = req.query.longitude;
-        const range = req.query.range;
-
-        // Query properties within the specified range of latitude and longitude
-        const properties = await Property.find({
-            "address.latitude": {
-                $geoWithin: {
-                    $centerSphere: [[parseFloat(longitude), parseFloat(latitude)], range / 6378100] // Convert range to radians
-                }
-            },
-            "address.longitude": {
-                $geoWithin: {
-                    $centerSphere: [[parseFloat(longitude), parseFloat(latitude)], range / 6378100] // Convert range to radians
+        const latitude = parseFloat(req.query.latitude);
+        const longitude = parseFloat(req.query.longitude);
+        const range = 25;
+        const properties = await Property.aggregate([
+            {
+                $geoNear: {
+                    near: { type: "Point", coordinates: [parseFloat(longitude), parseFloat(latitude)] },
+                    key: "address.location",
+                    maxDistance: parseFloat(range) * 1609,
+                    distanceField: "dist.calculated",
+                    spherical: true
                 }
             }
-        });
-
+        ])
         res.status(200).json(properties);
     } catch (err) {
+        console.log(err);
         res.status(500).json({ message: err.message });
     }
 });

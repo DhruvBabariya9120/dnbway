@@ -66,4 +66,6 @@ const propertySchema = new mongoose.Schema({
     timestamps: true,
 });
 
+propertySchema.index({ "address.location": "2dsphere" });
+
 export default mongoose.model('Property', propertySchema);

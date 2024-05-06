@@ -22,17 +22,20 @@ const propertyAddressSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
-    latitude: {
-        type: Number,
-        required: true,
-    },
-    longitude: {
-        type: Number,
-        required: true,
-    },
+    location: {
+        type: {
+            type: String,
+            enum: ['Point'],
+            default: 'Point'
+        },
+        coordinates: {
+            type: [Number],
+        }
+    }
 },
     {
-        timestamps: true
+        timestamps: true,
+        index: { location: "2dsphere" }
     });
 
 export default mongoose.model('PropertyAddress', propertyAddressSchema);
