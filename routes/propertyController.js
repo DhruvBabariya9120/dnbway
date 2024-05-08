@@ -257,4 +257,43 @@ router.get("/properties", isAuth, async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
+
+/**
+ * @swagger
+ * /api/property/{id}:
+ *   get:
+ *     summary: Get a property by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Property ID
+ *     responses:
+ *       '200':
+ *         description: Property found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Property'
+ *       '404':
+ *         description: Property not found
+ *       '400':
+ *         description: Bad request
+ */
+
+router.get("/:id", isAuth, async (req, res) => {
+    try {
+        const property = await Property.findById(req.params.id);
+        if (!property) {
+            return res.status(404).json({ message: "Property not found" });
+        }
+        res.status(200).json(property);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+
 export default router
