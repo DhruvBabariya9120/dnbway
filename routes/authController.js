@@ -63,13 +63,15 @@ router.post("/sign-up", async (req, res) => {
       email: req.body.email,
       otp: sentOTP
     });
-    const savedOTP = await newOTP.save();
-    console.log("savedOTP", savedOTP)
+    await newOTP.save();
 
     await sendOTPMail(req.body.email, otp);
+    const token = jwt.sign({ id: savedUser._id, email: savedUser.email }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRE_IN_HOURS,
+    });
 
     await session.commitTransaction();
-    res.status(200).send({ message: "Registration Successful", savedUser });
+    res.status(200).send({ message: "Registration Successful", savedUser, token });
   } catch (err) {
     await session.abortTransaction();
     console.error(err);
@@ -209,7 +211,7 @@ router.post("/forgot-password", async (req, res) => {
 
 /**
  * @swagger
- * /api/auth/verifyOtp:
+ * /api/auth/verify-otp:
  *   post:
  *     summary: Verify OTP
  *     description: Verify the OTP sent to a user's email address
@@ -260,9 +262,10 @@ router.post("/forgot-password", async (req, res) => {
  *                   type: string
  *                   example: Internal server error
  */
-router.post('/verifyOtp', async (req, res) => {
-  const { email, otp } = req.body;
+router.post('/verify-otp', isAuth, async (req, res) => {
+  const { otp } = req.body;
   try {
+    const email = req.user.email;
     // Find the OTP document for the provided email and OTP value
     const otpDoc = await OTP.findOne({ email, otp });
     if (!otpDoc) {
