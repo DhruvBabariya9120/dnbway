@@ -62,6 +62,10 @@ const propertySchema = new mongoose.Schema({
     amentities: {
         type: String,
     },
+    images: {
+        type: [String],
+        default: null
+    }
 }, {
     timestamps: true,
 });

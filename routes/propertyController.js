@@ -295,5 +295,83 @@ router.get("/:id", isAuth, async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/property/presigned-Url:
+ *   post:
+ *     summary: Generate presigned URL for image upload
+ *     description: Generates a presigned URL for uploading a image to AWS S3.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fileType:
+ *                 type: string
+ *                 description: The file type (e.g., jpg, png)
+ *                 example: jpg
+ *               propertyId:
+ *                 type: string
+ *                 description: The ID of the property
+ *                 example: 123
+ *      
+ *     responses:
+ *       200:
+ *         description: Presigned URL generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 presignedUrl:
+ *                   type: string
+ *                   description: The presigned URL for uploading the profile image
+ *       400:
+ *         description: Invalid file type
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Invalid file type
+ *       500:
+ *         description: Failed to generate presigned URL
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Failed to generate presigned URL
+ */
+router.post("/profile-presigned-Url", isAuth, async (req, res) => {
+    try {
+        const { fileType, propertyId } = req.body;
+        const property = await Property.findOne({ id });
+        if (!property) {
+            throw new NotFoundException("Property not found");
+        }
+        const key = `property/${id}_${Date.now()}.${fileType}`;
+        const params = {
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: key,
+            ContentType: `image/${fileType}`
+        };
+        const url = await s3.getSignedUrlPromise('putObject', params);
+        let image_data = property.images
+        image_data.push(key)
+        property.images = image_data
+        await property.save();
+        res.status(200).json({ presignedUrl: url });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 export default router

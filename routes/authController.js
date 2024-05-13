@@ -7,8 +7,17 @@ import isAuth from "../middlewares/is-auth.js";
 import sendOTPMail from "../utility/sendMail.js";
 import OTP from "../models/Otp.js";
 import mongoose from 'mongoose';
-
+import AWS from 'aws-sdk';
 const router = express.Router();
+
+AWS.config.update({
+  accessKeyId: process.env.YOUR_ACCESS_KEY_ID,
+  secretAccessKey: process.env.YOUR_SECRET_ACCESS_KEY,
+  region: process.env.YOUR_REGION
+});
+
+const s3 = new AWS.S3();
+
 
 /**
  * @swagger
@@ -346,5 +355,78 @@ router.post('/send-otp', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/auth/profile-presigned-Url:
+ *   post:
+ *     summary: Generate presigned URL for profile image upload
+ *     description: Generates a presigned URL for uploading a profile image to AWS S3.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fileType:
+ *                 type: string
+ *                 description: The file type (e.g., jpg, png)
+ *                 example: jpg
+ *     responses:
+ *       200:
+ *         description: Presigned URL generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 presignedUrl:
+ *                   type: string
+ *                   description: The presigned URL for uploading the profile image
+ *       400:
+ *         description: Invalid file type
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Invalid file type
+ *       500:
+ *         description: Failed to generate presigned URL
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Failed to generate presigned URL
+ */
+router.post("/profile-presigned-Url", isAuth, async (req, res) => {
+  try {
+    const { _id, email } = req.user;
+    const { fileType } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+    const key = `profile/${_id}_${Date.now()}.${fileType}`;
+    const params = {
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: key,
+      ContentType: `image/${fileType}` // Adjust content type based on your file type
+    };
+    const url = await s3.getSignedUrlPromise('putObject', params);
+    user.profileImage = key;
+    await user.save();
+    res.status(200).json({ presignedUrl: url });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 export default router;
+
