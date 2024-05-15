@@ -113,16 +113,19 @@ router.post("/sign-up", async (req, res) => {
  *         description: A list of users
  */
 router.post("/sign-in", async (req, res) => {
-
-  const user = await User.findOne({ email: req.body.email });
-  if (!user) return res.status(400).send({ message: "User does not Exist" });
-  const validPass = await bcrypt.compare(req.body.password, user.password);
-  if (!validPass) return res.status(400).send({ message: "Wrong Password" });
-  if (!user.isEmailVerified) return res.status(400).send({ message: "Email is not Verified" });
-  const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE_IN_HOURS,
-  });
-  res.status(200).send({ message: "Login Successful", user, token: token });
+  try {
+    const user = await User.findOne({ email: req.body.email });
+    if (!user) return res.status(400).send({ message: "User does not Exist" });
+    const validPass = await bcrypt.compare(req.body.password, user.password);
+    if (!validPass) return res.status(400).send({ message: "Wrong Password" });
+    if (!user.isEmailVerified) return res.status(400).send({ message: "Email is not Verified" });
+    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRE_IN_HOURS,
+    });
+    res.status(200).send({ message: "Login Successful", user, token: token });
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
 
 });
 
@@ -211,7 +214,7 @@ router.post("/forgot-password", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
     await User.findOneAndUpdate({ email: email }, { $set: { password: hashedPassword } });
 
-    return res.send({ error: false, message: "Password Changed" });
+    return res.send({ message: "Password Changed" });
 
   } catch (error) {
     res.status(404).json({ message: error.message });
@@ -289,7 +292,7 @@ router.post('/verify-otp', isAuth, async (req, res) => {
     res.status(200).json({ message: 'OTP verified successfully' });
   } catch (error) {
     console.error('Error verifying OTP:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -351,7 +354,7 @@ router.post('/send-otp', async (req, res) => {
     res.status(200).json({ message: 'OTP sent successfully' });
   } catch (error) {
     console.error('Error sending email:', error);
-    res.status(500).json({ error: 'Failed to send OTP' });
+    res.status(500).json({ message: 'Failed to send OTP' });
   }
 });
 
@@ -424,7 +427,7 @@ router.post("/profile-presigned-Url", isAuth, async (req, res) => {
     res.status(200).json({ presignedUrl: url });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: error.message });
   }
 });
 
