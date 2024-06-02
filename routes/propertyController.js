@@ -353,7 +353,7 @@ router.get("/:id", isAuth, async (req, res) => {
 router.post("/profile-presigned-Url", isAuth, async (req, res) => {
     try {
         const { fileType, propertyId } = req.body;
-        const property = await Property.findOne({ _id: propertyId });
+        const property = await Property.findById(propertyId);
         if (!property) {
             throw new NotFoundException("Property not found");
         }
