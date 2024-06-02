@@ -234,14 +234,10 @@ router.post("/forgot-password", async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
- *               email:
- *                 type: string
- *                 description: The email address of the user
- *                 example: user@example.com
  *               otp:
  *                 type: string
  *                 description: The OTP to be verified
- *                 example: 123456
+ *                 example: 1234
  *     responses:
  *       200:
  *         description: OTP verified successfully
@@ -337,7 +333,10 @@ router.post('/verify-otp', isAuth, async (req, res) => {
  */
 router.post('/send-otp', async (req, res) => {
   const { email } = req.body;
-
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(400).json({ message: 'User not found' });
+  }
   // Generate a random OTP
   let otp = randomstring.generate({
     length: 4,
@@ -351,6 +350,9 @@ router.post('/send-otp', async (req, res) => {
     });
     await newOTP.save();
     await sendOTPMail(req.body.email, otp);
+    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRE_IN_HOURS,
+    });
     res.status(200).json({ message: 'OTP sent successfully' });
   } catch (error) {
     console.error('Error sending email:', error);
