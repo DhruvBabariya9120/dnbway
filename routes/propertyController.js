@@ -1,8 +1,17 @@
 import express from "express";
 import Property from "../models/Property.js";
 import isAuth from "../middlewares/is-auth.js";
+import AWS from 'aws-sdk';
 const router = express.Router();
 
+
+AWS.config.update({
+    accessKeyId: process.env.YOUR_ACCESS_KEY_ID,
+    secretAccessKey: process.env.YOUR_SECRET_ACCESS_KEY,
+    region: process.env.YOUR_REGION
+});
+
+const s3 = new AWS.S3();
 
 // Function to generate the unique I
 /**
