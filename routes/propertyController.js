@@ -357,7 +357,7 @@ router.post("/profile-presigned-Url", isAuth, async (req, res) => {
         if (!property) {
             throw new NotFoundException("Property not found");
         }
-        const key = `property/${id}_${Date.now()}.${fileType}`;
+        const key = `property/${propertyId}_${Date.now()}.${fileType}`;
         const params = {
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: key,
