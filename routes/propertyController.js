@@ -270,6 +270,80 @@ router.get("/properties", isAuth, async (req, res) => {
 
 /**
  * @swagger
+ * /api/property/search:
+ *   get:
+ *     summary: Search for properties based on address fields and location
+ *     parameters:
+ *       - in: query
+ *         name: propertyAddress
+ *         schema:
+ *           type: string
+ *         description: Property address
+ *       - in: query
+ *         name: lat
+ *         schema:
+ *           type: number
+ *         description: Latitude for nearby search
+ *       - in: query
+ *         name: lng
+ *         schema:
+ *           type: number
+ *         description: Longitude for nearby search
+ *       - in: query
+ *         name: maxDistance
+ *         schema:
+ *           type: number
+ *           default: 5000
+ *         description: Maximum distance in meters for nearby search
+ *     responses:
+ *       '200':
+ *         description: A list of properties matching the search criteria
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Property'
+ *       '400':
+ *         description: Bad request
+ *       '500':
+ *         description: Internal server error
+ */
+router.get('/search', isAuth, async (req, res) => {
+    try {
+        const { propertyAddress, lat, lng, maxDistance = 5000 } = req.query;
+        console.log(propertyAddress, lat, lng, maxDistance)
+        // Build the query object
+        let query = {};
+        if (propertyAddress) {
+            query['$or'] = [
+                { 'address.propertyAddress': { $regex: propertyAddress, $options: 'i' } },
+                { 'address.city': { $regex: propertyAddress, $options: 'i' } },
+                { 'address.state': { $regex: propertyAddress, $options: 'i' } }
+            ];
+        }
+
+        // Check if lat and lng are provided for nearby search
+        if (lat && lng) {
+            query['address.location'] = {
+                $near: {
+                    $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
+                    $maxDistance: parseInt(maxDistance)
+                }
+            };
+        }
+
+        // Execute the query
+        const properties = await Property.find(query);
+        res.status(200).json(properties);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+/**
+ * @swagger
  * /api/property/{id}:
  *   get:
  *     summary: Get a property by ID

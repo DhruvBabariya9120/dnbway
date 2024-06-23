@@ -9,6 +9,7 @@ const propertyAddressSchema = new mongoose.Schema({
     unitNumber: {
         type: String,
         max: 255,
+
     },
     city: {
         type: String,
@@ -31,6 +32,10 @@ const propertyAddressSchema = new mongoose.Schema({
         coordinates: {
             type: [Number],
         }
+    },
+    is_approved: {
+        type: Boolean,
+        default: false
     }
 },
     {
