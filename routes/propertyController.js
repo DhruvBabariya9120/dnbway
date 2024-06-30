@@ -29,6 +29,8 @@ const s3 = new AWS.S3();
  *           type: string
  *         propertyDetails:
  *           type: string
+ *         propertyName:
+ *           type: string
  *         propertyType:
  *           type: string
  *         finishedSqft:
