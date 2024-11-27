@@ -47,7 +47,7 @@ const s3 = new AWS.S3();
  */
 router.post("/sign-up", async (req, res) => {
   const emailExist = await User.findOne({ email: req.body.email });
-  if (emailExist) return res.status(400).send({ message: "Email Already Exists", statusCode: 400 });
+  if (emailExist) return res.status(404).send({ message: "Email Already Exists", statusCode: 404 });
 
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(req.body.password, salt);
