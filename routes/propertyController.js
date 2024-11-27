@@ -97,10 +97,10 @@ router.post("/properties", isAuth, async (req, res) => {
     try {
         req.body.userId = req.userId;
         const property = await Property.create(req.body);
-        res.status(201).json(property);
+        res.status(201).json({ statusCode: 201, property });
     } catch (err) {
         console.log(err);
-        res.status(400).json({ message: err.message });
+        res.status(400).json({ statusCode: 400, message: err.message });
     }
 });
 
@@ -134,21 +134,21 @@ router.put("/properties/:id", isAuth, async (req, res) => {
     try {
         const existingProperty = await Property.findById(req.params.id);
         if (!existingProperty) {
-            return res.status(404).json({ message: "Property not found" });
+            return res.status(404).json({ statusCode: 404, message: "Property not found" });
         }
         if (existingProperty.userId.toString() !== req.userId) {
-            return res.status(401).json({ message: "Not authorized" });
+            return res.status(401).json({ statusCode: 401, message: "Not authorized" });
         }
         const property = await Property.findByIdAndUpdate(req.params.id, req.body, {
             new: true,
             runValidators: true,
         });
         if (!property) {
-            return res.status(404).json({ message: "Property not found" });
+            return res.status(404).json({ statusCode: 404, message: "Property not found" });
         }
-        res.status(200).json(property);
+        res.status(200).json({ statusCode: 200, property });
     } catch (err) {
-        res.status(400).json({ message: err.message });
+        res.status(400).json({ statusCode: 400, message: err.message });
     }
 });
 
@@ -180,10 +180,10 @@ router.get("/properties/user/", isAuth, async (req, res) => {
         const properties = await Property.find({ userId: userId });
 
         // Send the properties as a response
-        res.status(200).json(properties);
+        res.status(200).json({ statusCode: 200, properties });
     } catch (err) {
         // Handle errors
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ statusCode: 500, message: err.message });
     }
 });
 
@@ -209,15 +209,15 @@ router.delete("/properties/:id", isAuth, async (req, res) => {
     try {
         const existingProperty = await Property.findById(req.params.id);
         if (!existingProperty) {
-            return res.status(404).json({ message: "Property not found" });
+            return res.status(404).json({ statusCode: 404, message: "Property not found" });
         }
         if (existingProperty.userId.toString() !== req.userId) {
-            return res.status(401).json({ message: "Not authorized" });
+            return res.status(401).json({ statusCode: 401, message: "Not authorized" });
         }
         await Property.findByIdAndDelete(req.params.id);
-        res.status(200).json({ message: "Property deleted successfully" });
+        res.status(200).json({ statusCode: 200, message: "Property deleted successfully" });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ statusCode: 500, message: err.message });
     }
 });
 
@@ -263,10 +263,10 @@ router.get("/properties", isAuth, async (req, res) => {
                 }
             }
         ])
-        res.status(200).json(properties);
+        res.status(200).json({ statusCode: 200, properties });
     } catch (err) {
         console.log(err);
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ statusCode: 500, message: err.message });
     }
 });
 
@@ -337,10 +337,10 @@ router.get('/search', isAuth, async (req, res) => {
 
         // Execute the query
         const properties = await Property.find(query);
-        res.status(200).json(properties);
+        res.status(200).json({ statusCode: 200, properties });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ statusCode: 500, message: 'Internal server error' });
     }
 });
 
@@ -373,11 +373,11 @@ router.get("/:id", isAuth, async (req, res) => {
     try {
         const property = await Property.findById(req.params.id);
         if (!property) {
-            return res.status(404).json({ message: "Property not found" });
+            return res.status(404).json({ statusCode: 404, message: "Property not found" });
         }
-        res.status(200).json(property);
+        res.status(200).json({ statusCode: 200, property });
     } catch (err) {
-        res.status(400).json({ message: err.message });
+        res.status(500).json({ statusCode: 500, message: err.message });
     }
 });
 
@@ -453,10 +453,10 @@ router.post("/profile-presigned-Url", isAuth, async (req, res) => {
         image_data.push(key)
         property.images = image_data
         await property.save();
-        res.status(200).json({ presignedUrl: url });
+        res.status(200).json({ statusCode: 200, presignedUrl: url });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ statusCode: 500, message: error.message });
     }
 });
 

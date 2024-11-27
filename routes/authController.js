@@ -47,7 +47,7 @@ const s3 = new AWS.S3();
  */
 router.post("/sign-up", async (req, res) => {
   const emailExist = await User.findOne({ email: req.body.email });
-  if (emailExist) return res.status(400).send({ message: "Email Already Exists" });
+  if (emailExist) return res.status(400).send({ message: "Email Already Exists", statusCode: 400 });
 
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(req.body.password, salt);
@@ -80,11 +80,11 @@ router.post("/sign-up", async (req, res) => {
     });
 
     await session.commitTransaction();
-    res.status(200).send({ message: "Registration Successful", savedUser, token });
+    res.status(200).send({ statusCode: 200, message: "Registration Successful", savedUser, token });
   } catch (err) {
     await session.abortTransaction();
     console.error(err);
-    res.status(500).send({ message: "Error occurred during registration" });
+    res.status(500).send({ statusCode: 500, message: "Error occurred during registration" });
   } finally {
     session.endSession(); // End the session
   }
@@ -115,16 +115,16 @@ router.post("/sign-up", async (req, res) => {
 router.post("/sign-in", async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
-    if (!user) return res.status(400).send({ message: "User does not Exist" });
+    if (!user) return res.status(404).send({ statusCode: 404, message: "User does not Exist" });
     const validPass = await bcrypt.compare(req.body.password, user.password);
-    if (!validPass) return res.status(400).send({ message: "Wrong Password" });
-    if (!user.isEmailVerified) return res.status(400).send({ message: "Email is not Verified" });
+    if (!validPass) return res.status(403).send({ statusCode: 403, message: "Wrong Password" });
+    if (!user.isEmailVerified) return res.status(401).send({ statusCode: 401, message: "Email is not Verified" });
     const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRE_IN_HOURS,
     });
-    res.status(200).send({ message: "Login Successful", user, token: token });
+    res.status(200).send({ statusCode: 200, message: "Login Successful", user, token: token });
   } catch (err) {
-    res.status(500).send({ message: err.message });
+    res.status(500).send({ statusCode: 500, message: err.message });
   }
 
 });
@@ -152,9 +152,9 @@ router.post("/sign-in", async (req, res) => {
 router.get("/get-info/:email", isAuth, async (req, res) => {
   try {
     const user = await User.find({ email: req.params.email });
-    res.status(200).json(user);
+    res.status(200).json({ statusCode: 200, user });
   } catch (error) {
-    res.status(404).json({ message: error.message });
+    res.status(500).json({ statusCode: 500, message: error.message });
   }
 });
 
@@ -214,10 +214,10 @@ router.post("/forgot-password", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
     await User.findOneAndUpdate({ email: email }, { $set: { password: hashedPassword } });
 
-    return res.send({ message: "Password Changed" });
+    return res.status(200).json({ statusCode: 200, message: "Password Changed" });
 
   } catch (error) {
-    res.status(404).json({ message: error.message });
+    res.status(500).json({ statusCode: 500, message: error.message });
   }
 });
 
@@ -277,18 +277,18 @@ router.post('/verify-otp', isAuth, async (req, res) => {
     // Find the OTP document for the provided email and OTP value
     const otpDoc = await OTP.findOne({ email, otp });
     if (!otpDoc) {
-      return res.status(400).json({ message: 'Invalid OTP' });
+      return res.status(403).json({ statusCode: 403, message: 'Invalid OTP' });
     }
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: 'User not found' });
+      return res.status(404).json({ statusCode: 404, message: 'User not found' });
     }
     user.isEmailVerified = true;
     await user.save();
-    res.status(200).json({ message: 'OTP verified successfully' });
+    res.status(200).json({ statusCode: 200, message: 'OTP verified successfully' });
   } catch (error) {
     console.error('Error verifying OTP:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ statusCode: 500, message: 'Internal server error' });
   }
 });
 
@@ -335,7 +335,7 @@ router.post('/send-otp', async (req, res) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
   if (!user) {
-    return res.status(400).json({ message: 'User not found' });
+    return res.status(404).json({ statusCode: 404, message: 'User not found' });
   }
   // Generate a random OTP
   let otp = randomstring.generate({
@@ -353,10 +353,10 @@ router.post('/send-otp', async (req, res) => {
     const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRE_IN_HOURS,
     });
-    res.status(200).json({ message: 'OTP sent successfully' });
+    res.status(200).json({ statusCode: 200, message: 'OTP sent successfully' });
   } catch (error) {
     console.error('Error sending email:', error);
-    res.status(500).json({ message: 'Failed to send OTP' });
+    res.status(500).json({ statusCode: 500, message: 'Failed to send OTP' });
   }
 });
 
@@ -426,10 +426,10 @@ router.post("/profile-presigned-Url", isAuth, async (req, res) => {
     const url = await s3.getSignedUrlPromise('putObject', params);
     user.profileImage = key;
     await user.save();
-    res.status(200).json({ presignedUrl: url });
+    res.status(200).json({ statusCode: 200, presignedUrl: url });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ statusCode: 500, message: error.message });
   }
 });
 
