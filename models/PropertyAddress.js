@@ -32,10 +32,6 @@ const propertyAddressSchema = new mongoose.Schema({
         coordinates: {
             type: [Number],
         }
-    },
-    is_approved: {
-        type: Boolean,
-        default: false
     }
 },
     {

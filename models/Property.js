@@ -19,7 +19,7 @@ const propertySchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    propertyName :{
+    propertyName: {
         type: String,
         required: true,
     },
@@ -69,6 +69,10 @@ const propertySchema = new mongoose.Schema({
     images: {
         type: [String],
         default: null
+    },
+    is_approved: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true,

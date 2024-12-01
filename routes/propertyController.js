@@ -2,6 +2,7 @@ import express from "express";
 import Property from "../models/Property.js";
 import isAuth from "../middlewares/is-auth.js";
 import AWS from 'aws-sdk';
+import isAdmin from "../middlewares/is-admin.js";
 const router = express.Router();
 
 
@@ -101,6 +102,93 @@ router.post("/properties", isAuth, async (req, res) => {
     } catch (err) {
         console.log(err);
         res.status(400).json({ statusCode: 400, message: err.message });
+    }
+});
+
+/**
+ * @swagger
+ * /api/property/unapproved-properties:
+ *   get:
+ *     summary: Retrieve unapproved properties
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Maximum number of properties to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of properties to skip before starting to collect the result set
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter properties created after this date (inclusive)
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter properties created before this date (inclusive)
+ *     responses:
+ *       200:
+ *         description: A list of unapproved properties
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 200
+ *                 properties:
+ *                   type: array
+ *                   items:
+ *                      $ref: '#/components/schemas/Property'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 500
+ *                 error:
+ *                   type: string
+ *                   example: Internal Server Error
+ */
+router.get('/unapproved-properties', isAuth, isAdmin, async (req, res) => {
+    const { limit = 10, offset = 0, startDate, endDate } = req.query;
+
+    const query = { is_approved: false };
+
+    if (startDate || endDate) {
+        query.createdAt = {};
+        if (startDate) {
+            query.createdAt.$gte = new Date(startDate);
+        }
+        if (endDate) {
+            query.createdAt.$lte = new Date(endDate);
+        }
+    }
+
+    try {
+        const properties = await Property.find(query)
+            .sort({ updatedAt: -1 })
+            .skip(Number(offset))
+            .limit(Number(limit));
+
+        res.status(200).json({ statusCode: 200, properties });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ statusCode: 500, error: 'Internal Server Error' });
     }
 });
 
@@ -260,6 +348,11 @@ router.get("/properties", isAuth, async (req, res) => {
                     maxDistance: parseFloat(range) * 1609,
                     distanceField: "dist.calculated",
                     spherical: true
+                },
+            },
+            {
+                $match: {
+                    is_approved: true
                 }
             }
         ])
@@ -316,7 +409,7 @@ router.get('/search', isAuth, async (req, res) => {
         const { propertyAddress, lat, lng, maxDistance = 5000 } = req.query;
         console.log(propertyAddress, lat, lng, maxDistance)
         // Build the query object
-        let query = {};
+        let query = { is_approved: true };
         if (propertyAddress) {
             query['$or'] = [
                 { 'address.propertyAddress': { $regex: propertyAddress, $options: 'i' } },
@@ -459,5 +552,6 @@ router.post("/profile-presigned-Url", isAuth, async (req, res) => {
         res.status(500).json({ statusCode: 500, message: error.message });
     }
 });
+
 
 export default router
